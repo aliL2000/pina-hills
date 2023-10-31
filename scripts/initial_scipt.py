@@ -1,6 +1,6 @@
 import pandas as pd
 
-csv_file_path = '../Sample_input.csv'
+csv_file_path = 'data/Consultados/ConsultaSaldos (6).csv'
 
 df = pd.DataFrame()
 
@@ -19,4 +19,4 @@ with open(csv_file_path, 'r') as file:
 
 df = pd.concat(row_dataframes, ignore_index=True)
 print(df)
-df.to_csv("../output.csv", index=False)
+df.to_csv("data/Consultados/Consultados6FilteredCSV.csv", index=False)

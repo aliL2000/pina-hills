@@ -13,3 +13,6 @@ pinahills/
 
 #data
 data/
+
+*.xlsx
+*.pbix
