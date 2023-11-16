@@ -19,4 +19,4 @@ def download_attachments(path):
                 except Exception as detail:
                     countFail+=1
                     pass
-    print(f"Downloaded {countSuccess}/{countSuccess+countFail}")
+    print(f"Downloaded {countSuccess} PDFs")
