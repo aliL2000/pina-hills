@@ -1,5 +1,5 @@
 from email_attachment import download_attachments
-from pdf_parsing import read_produce_inspection_pdfs
+from pdf_parsing import read_produce_inspection_pdfs, read_shipping_pdfs, read_channel_island_pdfs
 
 PATH_TO_EML = 'data/email/'
 PATH_TO_PRODUCE_INSPECTION_INVOICE = 'data/email_attachment/produce_inspection/'
@@ -15,6 +15,9 @@ if __name__ == "__main__":
     #MANUAL: Move the PDF's to the correct directory (THIS CAN BE AUTOMATED,NEEDS TO BE DONE)
 
     #Then, once we have the PDF's downloaded, we need to get the data from each different type of PDF, and shove it into an MSACCESS DB
-    read_produce_inspection_pdfs(PATH_TO_PRODUCE_INSPECTION_INVOICE)
+    
+    #read_produce_inspection_pdfs(PATH_TO_PRODUCE_INSPECTION_INVOICE)
+    #read_shipping_pdfs(PATH_TO_SHIPPING_INVOICE)
+    read_channel_island_pdfs(PATH_TO_CHANNEL_ISLAND)
     
     
