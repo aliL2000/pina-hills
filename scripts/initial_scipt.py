@@ -16,7 +16,8 @@ with open(csv_file_path, 'r') as file:
         row_df = pd.DataFrame([temp], columns=columns)
         row_dataframes.append(row_df)
 
-
 df = pd.concat(row_dataframes, ignore_index=True)
-print(df)
+df['fechaMovimiento'] = pd.to_datetime(df['fechaMovimiento'])
+df['fechaMovimiento'] = df['fechaMovimiento'].dt.strftime('%d/%m/%Y')
+print(df['fechaMovimiento'])
 df.to_csv("data/Consultados/Consultados6FilteredCSV.csv", index=False)
