@@ -3,6 +3,7 @@ import os
 
 def download_attachments(path):
     listing = os.listdir(path)
+    print(listing)
     countSuccess = 0
     countFail = 0
     for fle in listing:
