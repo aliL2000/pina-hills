@@ -62,3 +62,11 @@ def write_shipping_db(df_data):
             cursor.execute("INSERT INTO Glasswing1 ([ContainerNumber], [SealandFreight]) VALUES (?, ?)", containerNumber, shippingPrice)
             conn.commit()
             print(f"Row inserted for Container Number: {containerNumber}")
+
+def set_customs_for_container_purchase(customs_price):
+    conn = pyodbc.connect(r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=../testDB/Cost Tracker.accdb;')
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE Glasswing1 SET [Customs] = ? ",customs_price)
+    conn.commit()
+    print(f"Changed price of ALL pineapple purchases to {customs_price}")

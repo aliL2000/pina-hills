@@ -6,6 +6,7 @@ from pdf_parsing import (
     read_pina_hills_supplier_cost_pdfs,
     read_formatted_channel_island_pdfs,
 )
+from db_processing import set_customs_for_container_purchase
 
 PATH_TO_EML = "data/email/"
 PATH_TO_PINAHILLS_SUPPLIER_COST = "data/email_attachment/pinahills_supplier_cost/"
@@ -28,5 +29,11 @@ if __name__ == "__main__":
     #read_pinahills_produce_inspection_pdfs(PATH_TO_PINAHILLS_PRODUCE_INSPECTION_INVOICE)
     #read_shipping_pdfs(PATH_TO_SHIPPING_INVOICE)
     
-    read_formatted_channel_island_pdfs(PATH_TO_PROPER_CHANNEL_ISLAND)
+    #read_formatted_channel_island_pdfs(PATH_TO_PROPER_CHANNEL_ISLAND)
     #read_nonformatted_channel_island_pdfs(PATH_TO_IMPROPER_CHANNEL_ISLAND)
+
+    ###DB DIRECT CHANGES###
+
+    ## --------------------------- ##
+
+    set_customs_for_container_purchase(125)
