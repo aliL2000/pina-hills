@@ -1,22 +1,38 @@
 import pyodbc
 
 
-def write_pina_hills_supplier_db(containerNumber,cost):
+def write_pina_hills_supplier_db(purchase_date,container_number,cost):
     conn = pyodbc.connect(r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=../testDB/Cost Tracker.accdb;')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Glasswing1 WHERE [ContainerNumber] = ?", (containerNumber,))
+    cursor.execute("SELECT * FROM Glasswing1 WHERE [ContainerNumber] = ?", (container_number,))
     existing_row = cursor.fetchone()
     pinaHills = "PinaHills"
     if existing_row:
         # If the container number exists, update the row
-        cursor.execute("UPDATE Glasswing1 SET [SupplierFruit] = ?, [Cost] = ? WHERE [ContainerNumber] = ?", pinaHills, cost, containerNumber)
+        cursor.execute("UPDATE Glasswing1 SET [SupplierFruit] = ?, [Cost] = ?, [PurchaseDate] = ? WHERE [ContainerNumber] = ?", pinaHills, cost, purchase_date,container_number)
         conn.commit()
-        print(f"Row updated for Container Number: {containerNumber}")
+        print(f"Row updated for Container Number in Glasswing1: {container_number}")
     else:
         # If the container number does not exist, insert a new row
-        cursor.execute("INSERT INTO Glasswing1 ([ContainerNumber], [SupplierFruit], [Cost]) VALUES (?, ?, ?)", containerNumber, pinaHills, cost)
+        cursor.execute("INSERT INTO Glasswing1 ([PurchaseDate], [ContainerNumber], [SupplierFruit], [Cost]) VALUES (?, ?, ?)",purchase_date, container_number, pinaHills, cost)
         conn.commit()
-        print(f"Row inserted for Container Number: {containerNumber}")
+        print(f"Row inserted for Container Number in Glasswing1: {container_number}")
+
+def write_pina_hills_cost_breakdown_db(container_number,type,quantity,unit_price,total):
+    conn = pyodbc.connect(r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=../testDB/Cost Tracker.accdb;')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Glasswing3 WHERE [ContainerNumber] = ? AND [Type] = ?", container_number,type)
+    existing_row = cursor.fetchone()
+    if existing_row:
+        # If the container number exists, update the row
+        cursor.execute("UPDATE Glasswing3 SET [UnitPrice] = ?, [Quantity] = ?, [Total] = ? WHERE [ContainerNumber] = ? AND [Type] = ?", unit_price, quantity, total,container_number,type)
+        conn.commit()
+        print(f"Row updated for Container Number in Glasswing3: {container_number}")
+    else:
+        # If the container number does not exist, insert a new row
+        cursor.execute("INSERT INTO Glasswing3 ([ContainerNumber], [Type],[UnitPrice], [Quantity],[Total]) VALUES (?, ?, ?, ?, ?)",container_number, type, unit_price, quantity, total)
+        conn.commit()
+        print(f"Row inserted for Container Number in Glasswing3: {container_number}")
 
 def write_pinahills_produce_inpsection_db(df_data):
     #print(df_data)

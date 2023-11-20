@@ -1,4 +1,4 @@
-from PyPDF2 import PdfReader 
+from PyPDF2 import PdfReader
 import pytesseract
 from pdf2image import convert_from_path
 import glob
@@ -6,81 +6,168 @@ import re
 import csv
 import os
 import pandas as pd
-from db_processing import write_pinahills_produce_inpsection_db, write_shipping_db, write_pina_hills_supplier_db
+import datetime
+from db_processing import (
+    write_pinahills_produce_inpsection_db,
+    write_shipping_db,
+    write_pina_hills_supplier_db,
+    write_pina_hills_cost_breakdown_db,
+)
+
+size_dictionary = {
+    "Crown": {5: "Crown5", 6: "Crown6", 7: "Crown7", 8: "Crown8"},
+    "Crownless": {
+        5: "Crownless5",
+        6: "Crownless6",
+        7: "Crownless7",
+        8: "Crownless8",
+    },
+}
+
 
 def read_pina_hills_supplier_cost_pdfs(path):
     listing = os.listdir(path)
     for fle in listing:
-        reader = PdfReader(path+fle)
+        reader = PdfReader(path + fle)
         raw_text = ""
         for page in reader.pages:
-            raw_text+=page.extract_text()
-        filtered_text = raw_text[raw_text.find('DESCRIPTION CANTIDAD PRECIO MONTO'):].replace("\n","")
+            raw_text += page.extract_text()
+        # print(raw_text)
+        # Code below is used for the first table
+        dateindex = raw_text.find("DATE")
+        date = raw_text[dateindex + 4 : dateindex + 15].replace(" ", "")
+        datetime_string = datetime.datetime.strptime(date, "%d/%m/%Y").strftime(
+            "%m/%d/%Y"
+        )
+        filtered_text = raw_text[
+            raw_text.find("DESCRIPTION CANTIDAD PRECIO MONTO") :
+        ].replace("\n", "")
         index = filtered_text.find("CONTAINER")
-        container = filtered_text[index+10:index+21]
+        container = filtered_text[index + 10 : index + 21]
         index = filtered_text.find("BALANCE DUE USD")
-        money = re.sub(r'[^0-9.,]', '', filtered_text[index+16:index+30]).replace(",","")
-        write_pina_hills_supplier_db(container,money)
+        money = re.sub(r"[^0-9.,]", "", filtered_text[index + 16 : index + 30]).replace(
+            ",", ""
+        )
+        # write_pina_hills_supplier_db(datetime_string,container,money)
+
+        # Code below is used for the third table
+        price_breakdown_list = list(
+            filter(
+                None,
+                raw_text[raw_text.find("MONTO") + 5 : raw_text.find("GUIA")]
+                .replace(",", "")
+                .split("\n"),
+            )
+        )
+        for price_string in price_breakdown_list:
+            pattern = r"([^\d]+)\s+(\d+)\s+(\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)"
+            match = re.match(pattern, price_string)
+
+            description = match.group(1).strip()
+            size = int(match.group(2))
+            quantity = int(match.group(3))
+            unit_price = float(match.group(4))
+            total = float(match.group(5))
+
+            print("Description:", description)
+            print("Size:", size)
+            print("Quantity:", quantity)
+            print("UnitPrice:", unit_price)
+            print("Total:", total)
+            if "corona" in description.lower():
+                type = size_dictionary["Crown"][size]
+            print(type)
+            write_pina_hills_cost_breakdown_db(container,type,quantity,unit_price,total)
+
 
 def read_pinahills_produce_inspection_pdfs(path):
     listing = os.listdir(path)
     for fle in listing:
-        reader = PdfReader(path+fle)
+        reader = PdfReader(path + fle)
         raw_text = ""
         for page in reader.pages:
-            raw_text+=page.extract_text()
+            raw_text += page.extract_text()
         print(raw_text)
-        filtered_text_list = re.split("[.]\d{2}", raw_text[raw_text.find('Thank you for your business!'):raw_text.find('Semana/Week:')].replace("\n",""))
-        total = float(filtered_text_list[0][len(filtered_text_list[0])-3:])
+        filtered_text_list = re.split(
+            "[.]\d{2}",
+            raw_text[
+                raw_text.find("Thank you for your business!") : raw_text.find(
+                    "Semana/Week:"
+                )
+            ].replace("\n", ""),
+        )
+        total = float(filtered_text_list[0][len(filtered_text_list[0]) - 3 :])
         filtered_text_list.pop()
         row_dataframes = []
-        for i in range(1,len(filtered_text_list)):
-            container = filtered_text_list[i][:13].replace("-","")
-            price = float(filtered_text_list[i][len(filtered_text_list[i])-3:])
+        for i in range(1, len(filtered_text_list)):
+            container = filtered_text_list[i][:13].replace("-", "")
+            price = float(filtered_text_list[i][len(filtered_text_list[i]) - 3 :])
             row_values = [container, price]
-            row_df = pd.DataFrame([row_values], columns=["Container Number", "QAInspection"])
+            row_df = pd.DataFrame(
+                [row_values], columns=["Container Number", "QAInspection"]
+            )
             row_dataframes.append(row_df)
         df = pd.concat(row_dataframes, ignore_index=True)
         if df["QAInspection"].sum() != total:
-            print(f"WARNING, processing file: {fle}, ran into a summation issue, double check")
+            print(
+                f"WARNING, processing file: {fle}, ran into a summation issue, double check"
+            )
         else:
             write_pinahills_produce_inpsection_db(df)
 
+
 def read_shipping_pdfs(path):
     listing = os.listdir(path)
-    
+
     for fle in listing:
-        reader = PdfReader(path+fle)
+        reader = PdfReader(path + fle)
         raw_text = ""
         for page in reader.pages:
-            raw_text+=page.extract_text()
-        filtered_text = raw_text[raw_text.find('Service Contract No.'):raw_text.find('Tax Specification Invoice Currency(USD)')].replace("\n","")
+            raw_text += page.extract_text()
+        filtered_text = raw_text[
+            raw_text.find("Service Contract No.") : raw_text.find(
+                "Tax Specification Invoice Currency(USD)"
+            )
+        ].replace("\n", "")
         row_dataframes = []
         container = filtered_text[21:32]
-        price = float(filtered_text[filtered_text.find("Payable Amount USD")+19:].replace(",",""))
+        price = float(
+            filtered_text[filtered_text.find("Payable Amount USD") + 19 :].replace(
+                ",", ""
+            )
+        )
         row_values = [container, price]
-        row_df = pd.DataFrame([row_values], columns=["Container Number", "SealandFreight"])
+        row_df = pd.DataFrame(
+            [row_values], columns=["Container Number", "SealandFreight"]
+        )
         row_dataframes.append(row_df)
         df = pd.concat(row_dataframes, ignore_index=True)
         write_shipping_db(df)
 
+
 def read_formatted_channel_island_pdfs(path):
     listing = os.listdir(path)
     for fle in listing:
-        reader = PdfReader(path+fle)
+        reader = PdfReader(path + fle)
         for page in reader.pages:
             page_text = page.extract_text()
-            charges = page_text[page_text.find("Equipment Qty Rate Amount")+25:page_text.find("TOTAL BY COMMODITY")].split("\n")
+            charges = page_text[
+                page_text.find("Equipment Qty Rate Amount")
+                + 25 : page_text.find("TOTAL BY COMMODITY")
+            ].split("\n")
             charges[:] = [x for x in charges if x]
             print(len(charges))
             for charge in charges:
-                match = re.search(r'\b[A-Z]{4}\d{7}\b', charge)
+                match = re.search(r"\b[A-Z]{4}\d{7}\b", charge)
 
                 match_index = match.start()
-                test = charge[:match_index+12].rstrip()
+                test = charge[: match_index + 12].rstrip()
 
                 # Use re.match to apply the pattern to the input string
-                match = re.match(r'^([^0-9]+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\w+(?:\s+\w+)*)$', test)
+                match = re.match(
+                    r"^([^0-9]+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\w+(?:\s+\w+)*)$",
+                    test,
+                )
 
                 if match:
                     description = match.group(1).strip()
@@ -101,47 +188,47 @@ def read_formatted_channel_island_pdfs(path):
 
 def read_nonformatted_channel_island_pdfs(path):
     listing = os.listdir(path)
-    
+
     for fle in listing:
-        pages = convert_from_path(path+fle)
+        pages = convert_from_path(path + fle)
         text = ""
-        for pageNum,imgBlob in enumerate(pages):
-            text += pytesseract.image_to_string(imgBlob,lang='eng')
-        print(text.replace("\n",""))
-        matches = re.findall(r'([A-Z]{4}\d{7}(?!\d))', text.replace("\n",""))
+        for pageNum, imgBlob in enumerate(pages):
+            text += pytesseract.image_to_string(imgBlob, lang="eng")
+        print(text.replace("\n", ""))
+        matches = re.findall(r"([A-Z]{4}\d{7}(?!\d))", text.replace("\n", ""))
         for match in matches:
             index = text.find(match)
-            sub_match = text[index:index+45].replace("\n","")
+            sub_match = text[index : index + 45].replace("\n", "")
             container = sub_match[:11]
             left_over = sub_match[11:]
-            filtered_string = re.sub(r'[^0-9.,]', '', left_over)
-            filtered_string.replace(",",".")
+            filtered_string = re.sub(r"[^0-9.,]", "", left_over)
+            filtered_string.replace(",", ".")
             numberlist = []
             current_number = ""
             for i in range(len(filtered_string)):
-                if filtered_string[i]==".":
+                if filtered_string[i] == ".":
                     current_number += filtered_string[i]
-                    current_number += filtered_string[i+1]
-                    current_number += filtered_string[i+2]
+                    current_number += filtered_string[i + 1]
+                    current_number += filtered_string[i + 2]
                     numberlist.append(float(current_number))
-                    current_number=""
-                    i+=2
+                    current_number = ""
+                    i += 2
                 else:
                     current_number += filtered_string[i]
-            print(container,numberlist)
+            print(container, numberlist)
             text = text[index:]
-            numberlist=[]
+            numberlist = []
             print("-----")
 
         print("__________________________")
-        
+
 
 #
-  
-# # printing number of pages in pdf file 
-# 
 
-#  
+# # printing number of pages in pdf file
+#
+
+#
 # find = text.split("\n")
 # regex_pattern = r'\d{13,}'
 # print(find)
@@ -157,9 +244,7 @@ def read_nonformatted_channel_island_pdfs(path):
 # #     count+=1
 
 
-
-
-#Reading from images
+# Reading from images
 
 # pages = convert_from_path(path)
 # text = ""
@@ -171,11 +256,6 @@ def read_nonformatted_channel_island_pdfs(path):
 
 
 # csv_filename = "data.csv"
-
-
-
-
-
 
 
 # Open the CSV file for writing
@@ -191,7 +271,7 @@ def read_nonformatted_channel_island_pdfs(path):
 #         item = item.replace("\n", "")
 #         if item.find("www.hacienda.go.cr")!=-1:
 #             item = item[:item.find("www.hacienda.go.cr")]+item[item.find("BIENES Y SERVICIOS")+18:]
-    
+
 #         two_digit_pattern = r'\d{2} \| \d{13}'
 #         one_digit_pattern = r'\d{1} \| \d{13}'
 #         three_digit_pattern = r'\d{3} \| \d{13}'
@@ -206,7 +286,7 @@ def read_nonformatted_channel_island_pdfs(path):
 #             code = tax_codes[6:19]
 #             characters = tax_codes[19:].replace("|","")
 #             csv_writer.writerow([number,code,characters])
-            
+
 #         elif two_match:
 #             start_index = two_match.start()
 #             tax_codes = item[start_index:]
@@ -214,7 +294,7 @@ def read_nonformatted_channel_island_pdfs(path):
 #             code = tax_codes[5:18]
 #             characters = tax_codes[18:].replace("|","")
 #             csv_writer.writerow([number,code,characters])
-            
+
 #         elif one_match:
 #             start_index = one_match.start()
 #             tax_codes = item[start_index:]

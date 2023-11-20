@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     # Then, once we have the PDF's downloaded, we need to get the data from each different type of PDF, and shove it into an MSACCESS DB
 
-    #read_pina_hills_supplier_cost_pdfs(PATH_TO_PINAHILLS_SUPPLIER_COST)
+    read_pina_hills_supplier_cost_pdfs(PATH_TO_PINAHILLS_SUPPLIER_COST)
     #read_pinahills_produce_inspection_pdfs(PATH_TO_PINAHILLS_PRODUCE_INSPECTION_INVOICE)
     #read_shipping_pdfs(PATH_TO_SHIPPING_INVOICE)
     
@@ -36,4 +36,4 @@ if __name__ == "__main__":
 
     ## --------------------------- ##
 
-    set_customs_for_container_purchase(125)
+    #set_customs_for_container_purchase(125)
