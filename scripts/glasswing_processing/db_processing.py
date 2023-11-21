@@ -79,6 +79,32 @@ def write_shipping_db(df_data):
             conn.commit()
             print(f"Row inserted for Container Number: {containerNumber}")
 
+def write_channel_island_page_db(date,df):
+    print(df)
+    conn = pyodbc.connect(r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=../testDB/Cost Tracker.accdb;')
+    cursor = conn.cursor()
+    for index, row in df.iterrows():
+        containerNumber = row["ContainerNumber"]
+        category = row["Category"]
+        subcategory = row["SubCategory"]
+        unitPrice = row["UnitPrice"]
+        quantity = row["Quantity"]
+        total = row["Total"]
+
+        # Check if the container number already exists in the database
+        cursor.execute("SELECT * FROM Glasswing2 WHERE [Date] = ? AND [ContainerNumber] = ? AND [Category] = ? AND [SubCategory] = ?", date, containerNumber, category, subcategory)
+        existing_row = cursor.fetchone()
+        if existing_row:
+            # If the container number exists, update the row
+            cursor.execute("UPDATE Glasswing2 SET [UnitPrice] = ?, [Quantity] = ?, [Total] = ? WHERE [Date] = ? AND [ContainerNumber] = ? AND [Category] = ? AND [SubCategory] = ?", unitPrice, quantity, total, date, containerNumber, category, subcategory)
+            conn.commit()
+            print(f"Row updated for Container Number: {containerNumber}")
+        else:
+            # If the container number does not exist, insert a new row
+            cursor.execute("INSERT INTO Glasswing2 ([Date],[ContainerNumber], [Category],[SubCategory], [UnitPrice],[Quantity],[Total]) VALUES (?, ?, ?, ?, ?, ?, ?)", date, containerNumber, category, subcategory, unitPrice, quantity, total)
+            conn.commit()
+            print(f"Row inserted for Container Number: {containerNumber}")
+
 def set_customs_for_container_purchase(customs_price):
     conn = pyodbc.connect(r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=../testDB/Cost Tracker.accdb;')
     cursor = conn.cursor()

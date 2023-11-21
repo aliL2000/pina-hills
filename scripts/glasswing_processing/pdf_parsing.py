@@ -12,6 +12,7 @@ from db_processing import (
     write_shipping_db,
     write_pina_hills_supplier_db,
     write_pina_hills_cost_breakdown_db,
+    write_channel_island_page_db,
 )
 
 size_dictionary = {
@@ -24,6 +25,27 @@ size_dictionary = {
     },
 }
 
+channel_islands_dictionary = {
+    "USDA": {
+        "Restack": "Inspection Restacking",
+        "Restrap": "Inspection Restrapping",
+        "Reload": "Inpsection Reloading",
+        "Inspection": "Inspection",
+        "Supplemental": "Supplemental"
+    },
+    "Transport": {
+        "Reload": "Reload",
+        "Unload": "Unload"
+    },
+    "ColdStorage": "Cold Storage",
+    "Presold": {
+        "Crossdock": "Cross Dock",
+        "Yard": "Yard Drayage",
+        
+    }
+}
+
+channel_islands_dictionary_keys = list(channel_islands_dictionary.keys())
 
 def read_pina_hills_supplier_cost_pdfs(path):
     listing = os.listdir(path)
@@ -36,9 +58,7 @@ def read_pina_hills_supplier_cost_pdfs(path):
         # Code below is used for the first table
         dateindex = raw_text.find("DATE")
         date = raw_text[dateindex + 4 : dateindex + 15].replace(" ", "")
-        datetime_string = datetime.datetime.strptime(date, "%d/%m/%Y").strftime(
-            "%m/%d/%Y"
-        )
+        datetime_string = datetime.datetime.strptime(date, "%d/%m/%Y")
         filtered_text = raw_text[
             raw_text.find("DESCRIPTION CANTIDAD PRECIO MONTO") :
         ].replace("\n", "")
@@ -48,7 +68,7 @@ def read_pina_hills_supplier_cost_pdfs(path):
         money = re.sub(r"[^0-9.,]", "", filtered_text[index + 16 : index + 30]).replace(
             ",", ""
         )
-        # write_pina_hills_supplier_db(datetime_string,container,money)
+        write_pina_hills_supplier_db(datetime_string, container, money)
 
         # Code below is used for the third table
         price_breakdown_list = list(
@@ -69,15 +89,11 @@ def read_pina_hills_supplier_cost_pdfs(path):
             unit_price = float(match.group(4))
             total = float(match.group(5))
 
-            print("Description:", description)
-            print("Size:", size)
-            print("Quantity:", quantity)
-            print("UnitPrice:", unit_price)
-            print("Total:", total)
             if "corona" in description.lower():
                 type = size_dictionary["Crown"][size]
-            print(type)
-            write_pina_hills_cost_breakdown_db(container,type,quantity,unit_price,total)
+            write_pina_hills_cost_breakdown_db(
+                container, type, quantity, unit_price, total
+            )
 
 
 def read_pinahills_produce_inspection_pdfs(path):
@@ -150,7 +166,10 @@ def read_formatted_channel_island_pdfs(path):
     for fle in listing:
         reader = PdfReader(path + fle)
         for page in reader.pages:
+            row_dataframes = []
             page_text = page.extract_text()
+            date = page_text[page_text.find("Date") + 6 : page_text.find("Date") + 16]
+            datetime_string = datetime.datetime.strptime(date, "%m/%d/%Y") 
             charges = page_text[
                 page_text.find("Equipment Qty Rate Amount")
                 + 25 : page_text.find("TOTAL BY COMMODITY")
@@ -170,19 +189,56 @@ def read_formatted_channel_island_pdfs(path):
                 )
 
                 if match:
-                    description = match.group(1).strip()
+                    description = match.group(1).strip().lower()
                     amount = float(match.group(2))
                     qty = float(match.group(3))
                     rate = float(match.group(4))
                     container_number = match.group(5)
 
-                    print("Description:", description)
-                    print("Amount:", amount)
-                    print("Quantity:", qty)
-                    print("Rate:", rate)
-                    print("Container Number:", container_number)
-                else:
-                    print("No match found.")
+                    category = ""
+                    subcategory = ""
+                    if "inspection" in description:
+                        if "restack" in description:
+                            category = channel_islands_dictionary_keys[0]
+                            subcategory = channel_islands_dictionary["USDA"]["Restack"]
+                        elif "restrap" in description:
+                            category = channel_islands_dictionary_keys[0]
+                            subcategory = channel_islands_dictionary["USDA"]["Restrap"]
+                        elif "reload" in description:
+                            category = channel_islands_dictionary_keys[0]
+                            subcategory = channel_islands_dictionary["USDA"]["Reload"]
+                        elif "supplemental" in description:
+                            category = channel_islands_dictionary_keys[0]
+                            subcategory = channel_islands_dictionary["USDA"]["Supplemental"]
+                        else:
+                            category = channel_islands_dictionary_keys[0]
+                            subcategory = channel_islands_dictionary["USDA"]["Inspection"]
+                    elif "unload" in description:
+                        category = channel_islands_dictionary_keys[1]
+                        subcategory = channel_islands_dictionary["Transport"]["Unload"]
+                    elif "reload" in description:
+                        category = channel_islands_dictionary_keys[1]
+                        subcategory = channel_islands_dictionary["Transport"]["Reload"]
+                    elif "cold storage" in description:
+                        category = channel_islands_dictionary_keys[2]
+                        subcategory = channel_islands_dictionary["ColdStorage"]
+                    elif "cross dock" in description:
+                        category = channel_islands_dictionary_keys[3]
+                        subcategory = channel_islands_dictionary["Presold"]["Crossdock"]
+                    elif "yard drayage" in description:
+                        category = channel_islands_dictionary_keys[3]
+                        subcategory = channel_islands_dictionary["Presold"]["Yard"]
+                    
+                    row_values = [container_number, category, subcategory,rate,qty,amount]
+                    row_df = pd.DataFrame(
+                        [row_values], columns=["ContainerNumber", "Category","SubCategory","UnitPrice","Quantity","Total"]
+                    )
+                    row_dataframes.append(row_df)
+
+
+            print(f"Will write {len(row_dataframes)} rows to the DB")
+            df = pd.concat(row_dataframes, ignore_index=True)
+            write_channel_island_page_db(datetime_string,df)
         print("------------")
 
 
