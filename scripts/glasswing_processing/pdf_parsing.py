@@ -163,8 +163,17 @@ def read_shipping_pdfs(path):
 
 def read_formatted_channel_island_pdfs(path):
     listing = os.listdir(path)
+    listing.remove("completed.txt")
+    #Determine if the PDF has already been read
+    completed_pdfs = []
+    f = open(path+"completed.txt", "r")
+    for x in f:
+        completed_pdfs.append(x.replace("\n",""))
+    f.close()
     for fle in listing:
         reader = PdfReader(path + fle)
+        if fle in completed_pdfs:
+            continue
         for page in reader.pages:
             row_dataframes = []
             page_text = page.extract_text()
@@ -234,13 +243,16 @@ def read_formatted_channel_island_pdfs(path):
                         [row_values], columns=["ContainerNumber", "Category","SubCategory","UnitPrice","Quantity","Total"]
                     )
                     row_dataframes.append(row_df)
-
-
+            
             print(f"Will write {len(row_dataframes)} rows to the DB")
             df = pd.concat(row_dataframes, ignore_index=True)
             write_channel_island_page_db(datetime_string,df)
-        print("------------")
+        write_completed_channel_island_files(path,fle)
+    print("------------")
 
+def write_completed_channel_island_files(path,filename):
+    with open(path+"completed.txt", 'a') as f:
+        f.write(filename="\n")
 
 def read_nonformatted_channel_island_pdfs(path):
     listing = os.listdir(path)
