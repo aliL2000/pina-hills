@@ -165,11 +165,7 @@ def read_formatted_channel_island_pdfs(path):
     listing = os.listdir(path)
     listing.remove("completed.txt")
     #Determine if the PDF has already been read
-    completed_pdfs = []
-    f = open(path+"completed.txt", "r")
-    for x in f:
-        completed_pdfs.append(x.replace("\n",""))
-    f.close()
+    completed_pdfs = get_files(path+"completed.txt")
     for fle in listing:
         reader = PdfReader(path + fle)
         if fle in completed_pdfs:
@@ -252,7 +248,15 @@ def read_formatted_channel_island_pdfs(path):
 
 def write_completed_channel_island_files(path,filename):
     with open(path+"completed.txt", 'a') as f:
-        f.write(filename="\n")
+        f.write(filename+"\n")
+
+def get_files(path):
+    files = []
+    f = open(path, "r")
+    for x in f:
+        files.append(x.replace("\n",""))
+    f.close()
+    return files
 
 def read_nonformatted_channel_island_pdfs(path):
     listing = os.listdir(path)

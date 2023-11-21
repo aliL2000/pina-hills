@@ -1,3 +1,4 @@
+import decimal
 import pyodbc
 
 
@@ -95,6 +96,9 @@ def write_channel_island_page_db(date,df):
         cursor.execute("SELECT * FROM Glasswing2 WHERE [Date] = ? AND [ContainerNumber] = ? AND [Category] = ? AND [SubCategory] = ?", date, containerNumber, category, subcategory)
         existing_row = cursor.fetchone()
         if existing_row:
+            unitPrice,currentQuantity,currentTotal = existing_row.UnitPrice,existing_row.Quantity,existing_row.Total
+            quantity+=currentQuantity
+            total=float(unitPrice)*quantity
             # If the container number exists, update the row
             cursor.execute("UPDATE Glasswing2 SET [UnitPrice] = ?, [Quantity] = ?, [Total] = ? WHERE [Date] = ? AND [ContainerNumber] = ? AND [Category] = ? AND [SubCategory] = ?", unitPrice, quantity, total, date, containerNumber, category, subcategory)
             conn.commit()
