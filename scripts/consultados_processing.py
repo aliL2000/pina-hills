@@ -1,6 +1,6 @@
 import pandas as pd
 
-csv_file_path = 'data/Consultados/ConsultaSaldos (6).csv'
+csv_file_path = 'data/Consultados/ConsultaSaldos (7).csv'
 
 df = pd.DataFrame()
 
@@ -19,5 +19,5 @@ with open(csv_file_path, 'r') as file:
 df = pd.concat(row_dataframes, ignore_index=True)
 df['fechaMovimiento'] = pd.to_datetime(df['fechaMovimiento'])
 df['fechaMovimiento'] = df['fechaMovimiento'].dt.strftime('%m/%d/%Y')
-print(df['fechaMovimiento'])
-df.to_csv("data/Consultados/Consultados6FilteredCSV.csv", index=False)
+print(df)
+df.to_csv("data/Consultados/Consultados7FilteredCSV.csv", index=False)

@@ -15,7 +15,7 @@ def write_pina_hills_supplier_db(purchase_date,container_number,cost):
         print(f"Row updated for Container Number in Glasswing1: {container_number}")
     else:
         # If the container number does not exist, insert a new row
-        cursor.execute("INSERT INTO Glasswing1 ([PurchaseDate], [ContainerNumber], [SupplierFruit], [Cost]) VALUES (?, ?, ?)",purchase_date, container_number, pinaHills, cost)
+        cursor.execute("INSERT INTO Glasswing1 ([PurchaseDate], [ContainerNumber], [SupplierFruit], [Cost]) VALUES (?, ?, ?, ?)",purchase_date, container_number, pinaHills, cost)
         conn.commit()
         print(f"Row inserted for Container Number in Glasswing1: {container_number}")
 
